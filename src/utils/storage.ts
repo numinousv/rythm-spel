@@ -23,34 +23,15 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-function idbSet(store: string, key: string, value: unknown): Promise<void> {
-  return new Promise(async (resolve, reject) => {
-    const db = await openDB();
-    const tx = db.transaction(store, "readwrite");
-    tx.objectStore(store).put(value, key);
-    tx.oncomplete = () => { db.close(); resolve(); };
-    tx.onerror = () => { db.close(); reject(tx.error); };
-  });
-}
-
-function idbGet<T>(store: string, key: string): Promise<T | undefined> {
-  return new Promise(async (resolve, reject) => {
-    const db = await openDB();
-    const tx = db.transaction(store, "readonly");
-    const req = tx.objectStore(store).get(key);
-    req.onsuccess = () => { db.close(); resolve(req.result); };
-    req.onerror = () => { db.close(); reject(req.error); };
-  });
-}
-
-function idbDelete(store: string, key: string): Promise<void> {
-  return new Promise(async (resolve, reject) => {
-    const db = await openDB();
-    const tx = db.transaction(store, "readwrite");
-    tx.objectStore(store).delete(key);
-    tx.oncomplete = () => { db.close(); resolve(); };
-    tx.onerror = () => { db.close(); reject(tx.error); };
-  });
+function idbRequest<T>(callback: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+  return openDB().then(
+    (db) =>
+      new Promise<T>((resolve, reject) => {
+        const req = callback(db.transaction(AUDIO_STORE).objectStore(AUDIO_STORE));
+        req.onsuccess = () => { db.close(); resolve(req.result); };
+        req.onerror = () => { db.close(); reject(req.error); };
+      }),
+  );
 }
 
 export function getSavedSongMeta(): { name: string; duration: number } | null {
@@ -74,7 +55,7 @@ export async function loadSavedSong(): Promise<{
 
   if (!name || !duration || !bpm || !beats) return null;
 
-  const blob = await idbGet<Blob>(AUDIO_STORE, AUDIO_KEY);
+  const blob = await idbRequest<Blob>((store) => store.get(AUDIO_KEY));
   if (!blob) return null;
 
   return {
@@ -93,7 +74,13 @@ export async function saveSong(
   bpm: number,
   beats: Beat[],
 ): Promise<void> {
-  await idbSet(AUDIO_STORE, AUDIO_KEY, file);
+  const db = await openDB();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(AUDIO_STORE, "readwrite");
+    tx.objectStore(AUDIO_STORE).put(file, AUDIO_KEY);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
   localStorage.setItem(META_KEYS.name, name);
   localStorage.setItem(META_KEYS.duration, String(duration));
   localStorage.setItem(META_KEYS.bpm, String(bpm));
@@ -101,6 +88,12 @@ export async function saveSong(
 }
 
 export async function clearSong(): Promise<void> {
-  await idbDelete(AUDIO_STORE, AUDIO_KEY);
+  const db = await openDB();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(AUDIO_STORE, "readwrite");
+    tx.objectStore(AUDIO_STORE).delete(AUDIO_KEY);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
   Object.values(META_KEYS).forEach((key) => localStorage.removeItem(key));
 }
