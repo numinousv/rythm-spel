@@ -1,4 +1,4 @@
-# Rythm-spel
+# Rhythm-spel
 
 "Practical Assignment – ​​Rhythm Game
 
@@ -27,5 +27,5 @@ The finished prototype must allow us to open the game, select a song, choose a d
 - **Router:** React-router
 - **Rendering:** HTML5 Canvas (2D)
 - **Audio:** Web Audio API
-- **Analysis:** A beat-detection library -- web-audio-beat-detector, @villium/echo-beat or rhy-game
+- **Analysis:** A beat-detection library -- modified ver. of npm@web-audio-beat-detector
 - **Deploy:** Cloudflare Pages/Workers
