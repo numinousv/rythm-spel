@@ -2,6 +2,8 @@
 
 A web-based rhythm game similar to Dance Dance Revolution or Osu!Mania that generates levels from any uploaded audio file with unique beatmaps for every new attempt.
 
+Development branch URL: <https://rhythm-yorha.pages.dev/>
+
 ![Game Screenshot](src/assets/screenshot.png)
 
 ## How to Run
