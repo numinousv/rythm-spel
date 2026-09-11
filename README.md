@@ -1,6 +1,6 @@
 # Rhythm-spel
 
-A web-based rhythm game similar to Dance Dance Revolution or Osu!Mania that generates levels from any uploaded audio file.
+A web-based rhythm game similar to Dance Dance Revolution or Osu!Mania that generates levels from any uploaded audio file with unique beatmaps for every new attempt.
 
 ![Game Screenshot](src/assets/screenshot.png)
 
