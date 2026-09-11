@@ -1,6 +1,8 @@
-export type Difficulty = "easy" | "medium" | "hard";
+export type Difficulty = "easy" | "medium" | "hard" | "extreme";
 
-export type NoteStatus = "pending" | "hit" | "missed";
+export type NoteType = "tap" | "hold";
+
+export type NoteStatus = "pending" | "holding" | "hit" | "missed";
 
 export interface Beat {
   time: number;
@@ -11,6 +13,8 @@ export interface Note {
   id: number;
   time: number;
   lane: number;
+  type: NoteType;
+  holdDuration: number;
   status: NoteStatus;
 }
 
@@ -38,6 +42,7 @@ export interface DifficultySettings {
   noteDensity: number;
   scrollSpeed: number;
   hitWindow: number;
+  holdChance: number;
   label: string;
 }
 
@@ -49,18 +54,28 @@ export const DIFFICULTY_CONFIG: Record<Difficulty, DifficultySettings> = {
     noteDensity: 0.4,
     scrollSpeed: 200,
     hitWindow: 150,
+    holdChance: 0.25,
     label: "Easy",
   },
   medium: {
     noteDensity: 0.7,
     scrollSpeed: 300,
     hitWindow: 100,
+    holdChance: 0.2,
     label: "Medium",
   },
   hard: {
     noteDensity: 1.0,
-    scrollSpeed: 400,
+    scrollSpeed: 500,
     hitWindow: 60,
+    holdChance: 0.2,
     label: "Hard",
+  },
+  extreme: {
+    noteDensity: 1.2,
+    scrollSpeed: 600,
+    hitWindow: 40,
+    holdChance: 0.25,
+    label: "Extreme",
   },
 };

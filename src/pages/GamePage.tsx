@@ -102,7 +102,6 @@ export function GamePage() {
             <div className="flex flex-col gap-4">
               <div className="flex justify-between text-xs tracking-[1px]">
                 <span>Score: {Math.round(gameState.score)}</span>
-                <span>Combo: {gameState.combo}</span>
                 <span>Accuracy: {calculateAccuracy(gameState)}%</span>
               </div>
               <GameCanvas
@@ -112,6 +111,16 @@ export function GamePage() {
                 onStateUpdate={handleGameStateUpdate}
                 songDuration={songDuration}
               />
+              {gameState.combo > 0 && (
+                <div className="flex justify-center -mt-2">
+                  <span
+                    key={gameState.combo}
+                    className="font-yorha text-4xl tracking-[4px] text-primary combo-pulse"
+                  >
+                    {gameState.combo}x
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </section>

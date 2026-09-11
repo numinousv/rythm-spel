@@ -14,20 +14,36 @@ export function generateNotes(
   );
 
   const usedTimes = new Set<number>();
+  const laneHoldEnd: number[] = new Array(LANE_COUNT).fill(0);
 
   for (const beat of filteredBeats) {
     const roundedTime = Math.round(beat.time * 10) / 10;
     if (usedTimes.has(roundedTime)) continue;
     usedTimes.add(roundedTime);
 
-    const lane = beat.intensity > 0.5
-      ? Math.floor(Math.random() * LANE_COUNT)
-      : Math.floor(Math.random() * 2) + 1;
+    const availableLanes: number[] = [];
+    for (let i = 0; i < LANE_COUNT; i++) {
+      if (beat.time >= laneHoldEnd[i]) {
+        availableLanes.push(i);
+      }
+    }
+    if (availableLanes.length === 0) continue;
+
+    const lane = availableLanes[Math.floor(Math.random() * availableLanes.length)];
+
+    const isHold = Math.random() < settings.holdChance;
+    const holdDuration = isHold ? 0.3 + Math.random() * 0.5 : 0;
+
+    if (isHold) {
+      laneHoldEnd[lane] = beat.time + holdDuration + 0.1;
+    }
 
     notes.push({
       id: id++,
       time: beat.time,
       lane,
+      type: isHold ? "hold" : "tap",
+      holdDuration,
       status: "pending",
     });
   }
