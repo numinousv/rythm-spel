@@ -1,8 +1,6 @@
 # Rhythm-spel
 
-A web-based rhythm game that generates levels from any uploaded audio file.
-
-URL: <https://rhythm-spel.pages.dev>
+A web-based rhythm game similar to Dance Dance Revolution or Osu!Mania that generates levels from any uploaded audio file.
 
 ![Game Screenshot](src/assets/screenshot.png)
 
@@ -16,8 +14,6 @@ bun run dev
 ```
 
 Open `http://localhost:5173` in your browser.
-
-Or just go to: <https://rhythm-spel.pages.dev>
 
 ## How to Play
 
