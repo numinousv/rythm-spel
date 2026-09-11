@@ -9,7 +9,7 @@ interface VolumeContextValue {
 
 const VolumeContext = createContext<VolumeContextValue>({
   musicVolume: 0.7,
-  sfxVolume: 0.3,
+  sfxVolume: 1,
   setMusicVolume: () => {},
   setSfxVolume: () => {},
 });
@@ -28,7 +28,7 @@ export function VolumeProvider({ children }: { children: ReactNode }) {
     () => readNum("vol:music", 70) / 100,
   );
   const [sfxVolume, setSfxVolumeState] = useState(
-    () => readNum("vol:sfx", 30) / 100,
+    () => readNum("vol:sfx", 100) / 100,
   );
 
   const setMusicVolume = (v: number) => {
