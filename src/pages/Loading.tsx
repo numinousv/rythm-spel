@@ -39,9 +39,12 @@ export function Loading({ onDone }: { onDone: () => void }) {
       <header className="flex items-center justify-between">
         <div className="flex flex-wrap items-baseline gap-x-3">
           <h1 className="font-yorha text-[48px] font-light tracking-[8px] text-primary text-shadow-yorha uppercase">
-            <Title title="RESULTS" subtitle2="- CHECKING SYSTEM" />
+            <Title title="LOADING" />
             <LoadingDots />
           </h1>
+          <h4 className="font-yorha text-[28px] font-light tracking-[8px] text-primary text-shadow-yorha uppercase">
+            <Title title="" subtitle2="- CHECKING SYSTEM" />
+          </h4>
         </div>
         <SpinLoadingIcon />
       </header>
