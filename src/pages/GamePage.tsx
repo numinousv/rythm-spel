@@ -74,7 +74,7 @@ export function GamePage() {
   };
 
   return (
-    <div className="max-w-225 mx-auto my-8 flex flex-col gap-4 px-4">
+    <div className="max-w-225 mx-auto my-4 sm:my-8 flex flex-col gap-4 px-4">
       <section className="py-2">
         <Title title="GAME" subtitle={songName} />
       </section>
@@ -88,7 +88,7 @@ export function GamePage() {
                 Difficulty: {DIFFICULTY_CONFIG[difficulty].label}
               </p>
               <p className="text-xs tracking-[1px] text-center opacity-70">
-                Keys: D F J K
+                Keys: D F J K — or tap the lanes on mobile
               </p>
               <Button type="button" onClick={handleStart}>
                 Start Game

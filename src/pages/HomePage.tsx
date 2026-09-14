@@ -16,8 +16,12 @@ export function HomePage() {
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(() => getInitialSavedSong()?.name ?? null);
-  const [savedSong, setSavedSong] = useState<{ name: string } | null>(getInitialSavedSong);
+  const [fileName, setFileName] = useState<string | null>(
+    () => getInitialSavedSong()?.name ?? null,
+  );
+  const [savedSong, setSavedSong] = useState<{ name: string } | null>(
+    getInitialSavedSong,
+  );
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -61,9 +65,9 @@ export function HomePage() {
   };
 
   return (
-    <div className="max-w-225 mx-auto my-8 flex flex-col gap-4 px-4">
+    <div className="max-w-225 mx-auto my-4 sm:my-8 flex flex-col gap-4 px-4">
       <section className="py-2">
-        <Title title="RHYTHM" subtitle="SPEL" />
+        <Title title="RHYTHM" subtitle="YoRHa" />
       </section>
       <Strip />
 
@@ -71,7 +75,7 @@ export function HomePage() {
         <Card title="SELECT SONG" layout="fill">
           <div className="flex flex-col gap-4 py-4">
             <p className="text-sm tracking-[1px]">
-              Upload an audio file to generate a rhythm level.
+              Upload an audio file to generate a unique beatmap
             </p>
 
             <input
@@ -95,7 +99,7 @@ export function HomePage() {
             </Button>
 
             {savedSong && (
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button type="button" onClick={handlePlaySaved}>
                   Play Saved Song
                 </Button>
@@ -113,7 +117,7 @@ export function HomePage() {
       <section>
         <Card title="DIFFICULTY" layout="fill">
           <div className="flex flex-col gap-4 py-4">
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {(Object.keys(DIFFICULTY_CONFIG) as Difficulty[]).map((d) => (
                 <Button
                   key={d}

@@ -20,6 +20,7 @@ const NOTE_HEIGHT = 20;
 const HIT_LINE_Y = CANVAS_HEIGHT - 80;
 const HIT_FLASH_DURATION = 150;
 const MISS_SHAKE_DURATION = 200;
+const PAUSE_BTN = { x: 365, y: 8, w: 28, h: 24 };
 
 interface GameCanvasProps {
   gameState: GameState;
@@ -51,6 +52,7 @@ export function GameCanvas({
   const slidertickRef = useRef<HTMLAudioElement | null>(null);
   const heldKeysRef = useRef<Set<string>>(new Set());
   const pausedRef = useRef(false);
+  const touchLanesRef = useRef<Map<number, number>>(new Map());
 
   useEffect(() => {
     onStateUpdateRef.current = onStateUpdate;
@@ -238,6 +240,10 @@ export function GameCanvas({
 
       ctx.restore();
 
+      ctx.fillStyle = "#57544a";
+      ctx.fillRect(PAUSE_BTN.x, PAUSE_BTN.y, 6, PAUSE_BTN.h);
+      ctx.fillRect(PAUSE_BTN.x + 14, PAUSE_BTN.y, 6, PAUSE_BTN.h);
+
       if (pausedRef.current) {
         ctx.fillStyle = "rgba(30, 30, 26, 0.7)";
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -309,29 +315,22 @@ export function GameCanvas({
       animFrameRef.current = requestAnimationFrame(gameLoop);
     };
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.repeat) return;
+    const togglePause = () => {
+      const audio = audioRef.current;
+      if (!audio) return;
 
-      if (e.code === "Space") {
-        e.preventDefault();
-        const audio = audioRef.current;
-        if (!audio) return;
-
-        pausedRef.current = !pausedRef.current;
-        if (pausedRef.current) {
-          audio.pause();
-        } else {
-          audio.play().catch(() => {});
-        }
-        return;
+      pausedRef.current = !pausedRef.current;
+      if (pausedRef.current) {
+        audio.pause();
+      } else {
+        audio.play().catch(() => {});
       }
+    };
 
+    const pressLane = (laneIndex: number) => {
       if (pausedRef.current) return;
 
-      const laneIndex = LANE_KEYS.indexOf(e.key.toLowerCase());
-      if (laneIndex === -1) return;
-
-      heldKeysRef.current.add(e.key.toLowerCase());
+      heldKeysRef.current.add(LANE_KEYS[laneIndex]);
 
       const audio = audioRef.current;
       if (!audio) return;
@@ -351,11 +350,8 @@ export function GameCanvas({
       }
     };
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      const laneIndex = LANE_KEYS.indexOf(e.key.toLowerCase());
-      if (laneIndex === -1) return;
-
-      heldKeysRef.current.delete(e.key.toLowerCase());
+    const releaseLane = (laneIndex: number) => {
+      heldKeysRef.current.delete(LANE_KEYS[laneIndex]);
 
       const audio = audioRef.current;
       if (!audio) return;
@@ -366,6 +362,113 @@ export function GameCanvas({
       if (newState !== state) {
         stateRef.current = newState;
         onStateUpdateRef.current(newState);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        togglePause();
+        return;
+      }
+
+      const laneIndex = LANE_KEYS.indexOf(e.key.toLowerCase());
+      if (laneIndex === -1) return;
+      e.preventDefault();
+      pressLane(laneIndex);
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const laneIndex = LANE_KEYS.indexOf(e.key.toLowerCase());
+      if (laneIndex === -1) return;
+      releaseLane(laneIndex);
+    };
+
+    const getTouchLane = (touch: Touch): number => {
+      const canvas = canvasRef.current;
+      if (!canvas) return -1;
+      const rect = canvas.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const lane = Math.floor(x / (rect.width / LANE_COUNT));
+      return lane >= 0 && lane < LANE_COUNT ? lane : -1;
+    };
+
+    const isPauseBtnTouch = (touch: Touch): boolean => {
+      const canvas = canvasRef.current;
+      if (!canvas) return false;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = CANVAS_WIDTH / rect.width;
+      const scaleY = CANVAS_HEIGHT / rect.height;
+      const x = (touch.clientX - rect.left) * scaleX;
+      const y = (touch.clientY - rect.top) * scaleY;
+      return (
+        x >= PAUSE_BTN.x && x <= PAUSE_BTN.x + PAUSE_BTN.w &&
+        y >= PAUSE_BTN.y && y <= PAUSE_BTN.y + PAUSE_BTN.h
+      );
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      if (pausedRef.current) return;
+
+      for (const touch of Array.from(e.changedTouches)) {
+        if (isPauseBtnTouch(touch)) {
+          togglePause();
+          continue;
+        }
+        const lane = getTouchLane(touch);
+        if (lane === -1) continue;
+        const laneAlreadyTouched = Array.from(touchLanesRef.current.values()).includes(lane);
+        touchLanesRef.current.set(touch.identifier, lane);
+        if (!laneAlreadyTouched) {
+          pressLane(lane);
+        }
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      e.preventDefault();
+
+      for (const touch of Array.from(e.changedTouches)) {
+        const lane = touchLanesRef.current.get(touch.identifier);
+        touchLanesRef.current.delete(touch.identifier);
+        if (lane === undefined) continue;
+
+        const stillTouched = Array.from(touchLanesRef.current.values()).includes(lane);
+        if (!stillTouched) {
+          releaseLane(lane);
+        }
+      }
+    };
+
+    const handleCanvasClick = (e: MouseEvent) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = CANVAS_WIDTH / rect.width;
+      const scaleY = CANVAS_HEIGHT / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+      if (
+        x >= PAUSE_BTN.x && x <= PAUSE_BTN.x + PAUSE_BTN.w &&
+        y >= PAUSE_BTN.y && y <= PAUSE_BTN.y + PAUSE_BTN.h
+      ) {
+        togglePause();
+      }
+    };
+
+    const handleTouchCancel = (e: TouchEvent) => {
+      for (const touch of Array.from(e.changedTouches)) {
+        const lane = touchLanesRef.current.get(touch.identifier);
+        touchLanesRef.current.delete(touch.identifier);
+        if (lane === undefined) continue;
+
+        const stillTouched = Array.from(touchLanesRef.current.values()).includes(lane);
+        if (!stillTouched) {
+          releaseLane(lane);
+        }
       }
     };
 
@@ -391,6 +494,14 @@ export function GameCanvas({
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
 
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+      canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
+      canvas.addEventListener("touchcancel", handleTouchCancel, { passive: false });
+      canvas.addEventListener("click", handleCanvasClick);
+    }
+
     return () => {
       pausedRef.current = false;
       audio.pause();
@@ -402,6 +513,12 @@ export function GameCanvas({
       cancelAnimationFrame(animFrameRef.current);
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      if (canvas) {
+        canvas.removeEventListener("touchstart", handleTouchStart);
+        canvas.removeEventListener("touchend", handleTouchEnd);
+        canvas.removeEventListener("touchcancel", handleTouchCancel);
+        canvas.removeEventListener("click", handleCanvasClick);
+      }
     };
   }, [audioUrl, getLaneColor, songDuration, playHitSound, playMissSound, musicVolume]);
 
@@ -411,7 +528,7 @@ export function GameCanvas({
         ref={canvasRef}
         width={CANVAS_WIDTH}
         height={CANVAS_HEIGHT}
-        className="border border-muted"
+        className="border border-muted touch-none max-w-full h-auto"
       />
     </div>
   );
