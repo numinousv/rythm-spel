@@ -51,31 +51,31 @@ export const LANE_KEYS = ["d", "f", "j", "k"];
 
 export const DIFFICULTY_CONFIG: Record<Difficulty, DifficultySettings> = {
   easy: {
-    noteDensity: 0.4,
-    scrollSpeed: 200,
-    hitWindow: 150,
-    holdChance: 0.25,
-    label: "Easy",
-  },
-  medium: {
     noteDensity: 0.7,
     scrollSpeed: 300,
     hitWindow: 100,
     holdChance: 0.2,
-    label: "Medium",
+    label: "Easy",
   },
-  hard: {
+  medium: {
     noteDensity: 1.0,
     scrollSpeed: 500,
     hitWindow: 60,
     holdChance: 0.2,
-    label: "Hard",
+    label: "Medium",
   },
-  extreme: {
+  hard: {
     noteDensity: 1.2,
     scrollSpeed: 600,
     hitWindow: 40,
     holdChance: 0.25,
+    label: "Hard",
+  },
+  extreme: {
+    noteDensity: 1.2,
+    scrollSpeed: 800,
+    hitWindow: 30,
+    holdChance: 0.3,
     label: "Extreme",
   },
 };
