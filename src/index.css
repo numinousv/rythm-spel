@@ -958,3 +958,36 @@
     transform: translateX(4px);
   }
 }
+
+.game-fullscreen:fullscreen {
+  background: #1e1e1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-fullscreen canvas {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.game-fullscreen:fullscreen canvas {
+  max-height: 100vh;
+  max-width: 100vw;
+}
+
+.game-pseudo-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-pseudo-fullscreen canvas {
+  max-height: 100dvh;
+  max-width: 100vw;
+}

@@ -22,7 +22,7 @@ Open `http://localhost:5173` in your browser.
 ## How to Play
 
 1. Upload an audio file (MP3, WAV, OGG, etc.)
-2. Choose a difficulty: Easy, Medium, or Hard
+2. Choose a difficulty: Easy, Medium, Hard, or Extreme
 3. Hit **D, F, J, K** in time with the music as notes scroll down, or if on mobile, simply tap the lanes where the notes appear.
 4. View your results: score, accuracy, max combo, and a letter grade (S/A/B/C/D)
 5. Retry for a new randomized variation, or go back and try a different song

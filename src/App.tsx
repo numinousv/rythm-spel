@@ -41,7 +41,7 @@ export function App() {
           to="/"
           className="font-yorha text-base font-bold text-primary opacity-70 hover:opacity-100 tracking-[1px] no-underline transition-opacity"
         >
-          ▶ HOME
+          HOME
         </Link>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 justify-end">
           <VolumeSlider
@@ -49,11 +49,7 @@ export function App() {
             value={musicVolume}
             onChange={setMusicVolume}
           />
-          <VolumeSlider
-            label="SFX"
-            value={sfxVolume}
-            onChange={setSfxVolume}
-          />
+          <VolumeSlider label="SFX" value={sfxVolume} onChange={setSfxVolume} />
           <Switch
             label={theme === "dark" ? "Dark" : "Light"}
             checked={theme === "dark"}
