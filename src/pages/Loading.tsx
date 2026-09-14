@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LoadingDots, SpinLoadingIcon } from "../components";
+import { Title, LoadingDots, SpinLoadingIcon } from "../components";
 import yorhaLogo from "../assets/yorhalogo.png";
 
 const LOG_LINES = [
@@ -38,13 +38,10 @@ export function Loading({ onDone }: { onDone: () => void }) {
       />
       <header className="flex items-center justify-between">
         <div className="flex flex-wrap items-baseline gap-x-3">
-          <h1 className="text-[clamp(20px,4vw,48px)] font-light uppercase tracking-[8px] opacity-90 [text-shadow:0px_0px_5px_rgba(255,255,255,0.8)]">
-            Loading
+          <h1 className="font-yorha text-[48px] font-light tracking-[8px] text-primary text-shadow-yorha uppercase">
+            <Title title="RESULTS" subtitle2="- CHECKING SYSTEM" />
             <LoadingDots />
           </h1>
-          <p className="text-sm tracking-[1px] opacity-80 [text-shadow:0px_0px_5px_rgba(255,255,255,0.6)]">
-            - CHECKING SYSTEM
-          </p>
         </div>
         <SpinLoadingIcon />
       </header>
