@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useTheme, useVolume } from "./components";
 import { Switch } from "./components";
 import { AppRoutes } from "./app/routes";
 import { Link } from "react-router";
+import { Loading } from "./pages/Loading";
 
 function VolumeSlider({
   label,
@@ -33,6 +35,13 @@ function VolumeSlider({
 export function App() {
   const { theme, toggleTheme } = useTheme();
   const { musicVolume, sfxVolume, setMusicVolume, setSfxVolume } = useVolume();
+  // boot screen shows on every fresh page load. app mounts once per load,
+  // never on client-side route changes, so in-app trips to "/" skip it.
+  const [showLoading, setShowLoading] = useState(true);
+
+  const handleLoadingDone = () => {
+    setShowLoading(false);
+  };
 
   return (
     <div className="max-w-225 mx-auto my-4 sm:my-8 flex flex-col gap-4 px-4">
@@ -63,6 +72,7 @@ export function App() {
         </span>
       </section>
       <AppRoutes />
+      {showLoading && <Loading onDone={handleLoadingDone} />}
     </div>
   );
 }
