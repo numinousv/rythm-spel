@@ -4,10 +4,10 @@ import { Title, Button, Card, Strip } from "../components";
 import type { Difficulty } from "../types/game";
 import { DIFFICULTY_CONFIG } from "../types/game";
 import { analyzeAudioFile } from "../services/audioAnalyzer";
-import { getSavedSongMeta, saveSong, clearSong } from "../utils/storage";
+import { getSavedSongs, saveSong, deleteSong, type SavedSongMeta } from "../utils/storage";
 
-function getInitialSavedSong() {
-  return getSavedSongMeta();
+function getInitialSavedSongs(): SavedSongMeta[] {
+  return getSavedSongs();
 }
 
 export function HomePage() {
@@ -17,14 +17,13 @@ export function HomePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(
-    () => getInitialSavedSong()?.name ?? null,
+    () => getInitialSavedSongs()[0]?.name ?? null,
   );
-  const [savedSong, setSavedSong] = useState<{ name: string } | null>(
-    getInitialSavedSong,
-  );
+  const [songs, setSongs] = useState<SavedSongMeta[]>(getInitialSavedSongs);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
 
     setFileName(file.name);
@@ -34,16 +33,17 @@ export function HomePage() {
     try {
       const songData = await analyzeAudioFile(file);
 
-      await saveSong(
+      const id = await saveSong(
         file,
         songData.name,
         songData.duration,
         songData.bpm,
         songData.beats,
       );
-      setSavedSong({ name: songData.name });
+      setSongs(getSavedSongs());
 
       sessionStorage.setItem("difficulty", difficulty);
+      sessionStorage.setItem("songId", id);
       navigate("/game");
     } catch (err) {
       console.error(err);
@@ -53,15 +53,17 @@ export function HomePage() {
     }
   };
 
-  const handlePlaySaved = () => {
+  const handlePlaySong = (id: string) => {
     sessionStorage.setItem("difficulty", difficulty);
+    sessionStorage.setItem("songId", id);
     navigate("/game");
   };
 
-  const handleClearSong = async () => {
-    await clearSong();
-    setFileName(null);
-    setSavedSong(null);
+  const handleDeleteSong = async (id: string) => {
+    await deleteSong(id);
+    const remaining = getSavedSongs();
+    setSongs(remaining);
+    if (remaining.length === 0) setFileName(null);
   };
 
   return (
@@ -81,7 +83,7 @@ export function HomePage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="audio/*"
+              accept="audio/*,.mp3,.wav,.ogg,.oga,.m4a,.aac,.flac,.opus,.weba,.webm"
               onChange={handleFileChange}
               className="hidden"
             />
@@ -98,14 +100,25 @@ export function HomePage() {
                   : "Choose Audio File"}
             </Button>
 
-            {savedSong && (
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button type="button" onClick={handlePlaySaved}>
-                  Play Saved Song
-                </Button>
-                <Button type="button" onClick={handleClearSong}>
-                  Clear
-                </Button>
+            {songs.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs tracking-[1px] opacity-70">
+                  SAVED SONGS ({songs.length}/3)
+                </p>
+                {songs.map((song) => (
+                  <div key={song.id} className="flex gap-2">
+                    <Button type="button" onClick={() => handlePlaySong(song.id)}>
+                      Play: {song.name}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => handleDeleteSong(song.id)}
+                      className="w-auto"
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
 
