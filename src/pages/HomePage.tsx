@@ -1,10 +1,16 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Title, Button, Card, Strip } from "../components";
 import type { Difficulty } from "../types/game";
 import { DIFFICULTY_CONFIG } from "../types/game";
 import { analyzeAudioFile } from "../services/audioAnalyzer";
-import { getSavedSongs, saveSong, deleteSong, type SavedSongMeta } from "../utils/storage";
+import {
+  getSavedSongs,
+  saveSong,
+  deleteSong,
+  type SavedSongMeta,
+} from "../utils/storage";
+import { prefetchGamePage } from "../app/routes";
 
 function getInitialSavedSongs(): SavedSongMeta[] {
   return getSavedSongs();
@@ -13,6 +19,26 @@ function getInitialSavedSongs(): SavedSongMeta[] {
 export function HomePage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // fetch the game chunk while idle so starting a song feels instant.
+  useEffect(() => {
+    let cancelled = false;
+    const run = () => {
+      if (!cancelled) prefetchGamePage();
+    };
+    if (window.requestIdleCallback) {
+      const id = window.requestIdleCallback(run);
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback(id);
+      };
+    }
+    const t = setTimeout(run, 1);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, []);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +133,10 @@ export function HomePage() {
                 </p>
                 {songs.map((song) => (
                   <div key={song.id} className="flex gap-2">
-                    <Button type="button" onClick={() => handlePlaySong(song.id)}>
+                    <Button
+                      type="button"
+                      onClick={() => handlePlaySong(song.id)}
+                    >
                       Play: {song.name}
                     </Button>
                     <Button

@@ -10,6 +10,7 @@ import {
 } from "../services/gameEngine";
 import { GameCanvas } from "../components/GameCanvas";
 import { loadSong } from "../utils/storage";
+import { prefetchResultsPage } from "../app/routes";
 
 export function GamePage() {
   const navigate = useNavigate();
@@ -40,6 +41,26 @@ export function GamePage() {
     }
     prevComboRef.current = combo;
   }, [gameState?.combo]);
+
+  // fetch the results chunk while idle (minutes of gameplay ahead)
+  useEffect(() => {
+    let cancelled = false;
+    const run = () => {
+      if (!cancelled) prefetchResultsPage();
+    };
+    if (window.requestIdleCallback) {
+      const id = window.requestIdleCallback(run);
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback(id);
+      };
+    }
+    const t = setTimeout(run, 1);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, []);
 
   const handleStart = async () => {
     try {
@@ -99,7 +120,7 @@ export function GamePage() {
   return (
     <div className="max-w-225 mx-auto my-4 sm:my-8 flex flex-col gap-4 px-4">
       <section className="py-2">
-        <Title title="GAME" subtitle={songName} />
+        <Title title="GAME" subtitle3={songName} />
       </section>
       <Strip />
 

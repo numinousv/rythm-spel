@@ -4,6 +4,7 @@ interface TitleProps {
   title?: string;
   subtitle?: string;
   subtitle2?: string;
+  subtitle3?: string;
 }
 
 const CHARS =
@@ -36,11 +37,13 @@ export function Title({
   title = "",
   subtitle = "",
   subtitle2 = "",
+  subtitle3 = "",
 }: TitleProps) {
   const [displayTitle, setDisplayTitle] = useState("");
   const [displaySubtitle, setDisplaySubtitle] = useState("");
   const [displaySubtitle2, setDisplaySubtitle2] = useState("");
-
+  // subtitle3 intentionally has no display state/it renders without a
+  // scramble effect (scrambling text glithced the game view, also optimizes the webapp).
   useEffect(() => {
     const intervals: ReturnType<typeof setInterval>[] = [];
     if (title) {
@@ -68,6 +71,11 @@ export function Title({
       {subtitle2 && (
         <h4 className="font-yorha text-xs font-light tracking-normal text-primary">
           -{displaySubtitle2}
+        </h4>
+      )}
+      {subtitle3 && (
+        <h4 className="font-yorha text-xs font-light tracking-normal text-primary">
+          -{subtitle3}
         </h4>
       )}
     </div>
