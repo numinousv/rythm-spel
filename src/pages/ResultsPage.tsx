@@ -60,7 +60,7 @@ export function ResultsPage() {
   return (
     <div className="max-w-225 mx-auto my-8 flex flex-col gap-4 px-4">
       <section className="py-2">
-        <Title title="RESULTS" subtitle3={songName} />
+        <Title title2="RESULTS" subtitle3={songName} />
       </section>
       <Strip />
 

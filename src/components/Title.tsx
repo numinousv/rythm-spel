@@ -5,6 +5,7 @@ interface TitleProps {
   subtitle?: string;
   subtitle2?: string;
   subtitle3?: string;
+  title2?: string;
 }
 
 const CHARS =
@@ -38,6 +39,7 @@ export function Title({
   subtitle = "",
   subtitle2 = "",
   subtitle3 = "",
+  title2 = "",
 }: TitleProps) {
   const [displayTitle, setDisplayTitle] = useState("");
   const [displaySubtitle, setDisplaySubtitle] = useState("");
@@ -77,6 +79,11 @@ export function Title({
         <h4 className="font-yorha text-xs font-light tracking-normal text-primary">
           -{subtitle3}
         </h4>
+      )}
+      {title2 && (
+        <h1 className="font-yorha text-[48px] font-light tracking-[8px] text-primary text-shadow-yorha uppercase">
+          {title2}
+        </h1>
       )}
     </div>
   );
