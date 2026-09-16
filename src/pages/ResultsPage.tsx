@@ -8,7 +8,8 @@ export function ResultsPage() {
 
   const rawState = sessionStorage.getItem("finalGameState");
   const songName = sessionStorage.getItem("songName") || "Unknown";
-  const difficulty = (sessionStorage.getItem("difficulty") || "medium") as Difficulty;
+  const difficulty = (sessionStorage.getItem("difficulty") ||
+    "medium") as Difficulty;
 
   if (!rawState) {
     return (
@@ -21,7 +22,11 @@ export function ResultsPage() {
           <Card title="NO DATA" layout="fill">
             <div className="py-4 text-center">
               <p className="text-sm">No results found.</p>
-              <Button type="button" onClick={() => navigate("/")} className="mt-4">
+              <Button
+                type="button"
+                onClick={() => navigate("/")}
+                className="mt-4"
+              >
                 Back to Menu
               </Button>
             </div>
@@ -35,27 +40,36 @@ export function ResultsPage() {
   const accuracy = state.accuracy || 0;
 
   const grade =
-    accuracy >= 95 ? "S" :
-    accuracy >= 85 ? "A" :
-    accuracy >= 70 ? "B" :
-    accuracy >= 50 ? "C" : "D";
+    accuracy >= 95
+      ? "S"
+      : accuracy >= 85
+        ? "A"
+        : accuracy >= 70
+          ? "B"
+          : accuracy >= 50
+            ? "C"
+            : "D";
 
   const gradeColor =
-    grade === "S" || grade === "A" ? "text-primary" :
-    grade === "D" ? "text-alert" :
-    "text-foreground";
+    grade === "S" || grade === "A"
+      ? "text-primary"
+      : grade === "D"
+        ? "text-alert"
+        : "text-foreground";
 
   return (
     <div className="max-w-225 mx-auto my-8 flex flex-col gap-4 px-4">
       <section className="py-2">
-        <Title title="RESULTS" subtitle={songName} />
+        <Title title="RESULTS" subtitle3={songName} />
       </section>
       <Strip />
 
       <section>
         <Card title="PERFORMANCE" layout="fill">
           <div className="flex flex-col gap-6 py-6 items-center">
-            <div className={`font-yorha text-[72px] font-light tracking-[8px] ${gradeColor}`}>
+            <div
+              className={`font-yorha text-[72px] font-light tracking-[8px] ${gradeColor}`}
+            >
               {grade}
             </div>
 
