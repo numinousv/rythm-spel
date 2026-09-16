@@ -3,14 +3,26 @@ import type { Beat } from "../types/game";
 const DB_NAME = "rythm-spel-db";
 const DB_VERSION = 1;
 const AUDIO_STORE = "audio";
-const AUDIO_KEY = "song";
+const LEGACY_AUDIO_KEY = "song";
 
-const META_KEYS = {
+const LIST_KEY = "songs:list";
+const MAX_SONGS = 3;
+
+const LEGACY_META_KEYS = {
   name: "song:name",
   duration: "song:duration",
   bpm: "song:bpm",
   beats: "song:beats",
 } as const;
+
+export interface SavedSongMeta {
+  id: string;
+  name: string;
+  duration: number;
+  bpm: number;
+  beats: Beat[];
+  blobKey: string;
+}
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -23,66 +35,104 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-function idbSet(store: string, key: string, value: unknown): Promise<void> {
-  return new Promise(async (resolve, reject) => {
-    const db = await openDB();
-    const tx = db.transaction(store, "readwrite");
-    tx.objectStore(store).put(value, key);
-    tx.oncomplete = () => { db.close(); resolve(); };
-    tx.onerror = () => { db.close(); reject(tx.error); };
-  });
+function idbRequest<T>(callback: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+  return openDB().then(
+    (db) =>
+      new Promise<T>((resolve, reject) => {
+        const req = callback(db.transaction(AUDIO_STORE).objectStore(AUDIO_STORE));
+        req.onsuccess = () => { db.close(); resolve(req.result); };
+        req.onerror = () => { db.close(); reject(req.error); };
+      }),
+  );
 }
 
-function idbGet<T>(store: string, key: string): Promise<T | undefined> {
-  return new Promise(async (resolve, reject) => {
-    const db = await openDB();
-    const tx = db.transaction(store, "readonly");
-    const req = tx.objectStore(store).get(key);
-    req.onsuccess = () => { db.close(); resolve(req.result); };
-    req.onerror = () => { db.close(); reject(req.error); };
-  });
+function idbWrite(callback: (store: IDBObjectStore) => void): Promise<void> {
+  return openDB().then(
+    (db) =>
+      new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(AUDIO_STORE, "readwrite");
+        callback(tx.objectStore(AUDIO_STORE));
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+      }),
+  );
 }
 
-function idbDelete(store: string, key: string): Promise<void> {
-  return new Promise(async (resolve, reject) => {
-    const db = await openDB();
-    const tx = db.transaction(store, "readwrite");
-    tx.objectStore(store).delete(key);
-    tx.oncomplete = () => { db.close(); resolve(); };
-    tx.onerror = () => { db.close(); reject(tx.error); };
-  });
+function readList(): SavedSongMeta[] {
+  try {
+    const raw = localStorage.getItem(LIST_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
-export function getSavedSongMeta(): { name: string; duration: number } | null {
-  const name = localStorage.getItem(META_KEYS.name);
-  const duration = localStorage.getItem(META_KEYS.duration);
-  if (!name || !duration) return null;
-  return { name, duration: Number(duration) };
+function writeList(songs: SavedSongMeta[]): void {
+  localStorage.setItem(LIST_KEY, JSON.stringify(songs));
 }
 
-export async function loadSavedSong(): Promise<{
+function migrateLegacySong(): SavedSongMeta[] {
+  const name = localStorage.getItem(LEGACY_META_KEYS.name);
+  const duration = localStorage.getItem(LEGACY_META_KEYS.duration);
+  const bpm = localStorage.getItem(LEGACY_META_KEYS.bpm);
+  const beats = localStorage.getItem(LEGACY_META_KEYS.beats);
+
+  if (!name || !duration || !bpm || !beats) return [];
+
+  let parsedBeats: Beat[] = [];
+  try {
+    parsedBeats = JSON.parse(beats);
+  } catch {
+    return [];
+  }
+
+  const migrated: SavedSongMeta = {
+    id: `legacy-${Date.now()}`,
+    name,
+    duration: Number(duration),
+    bpm: Number(bpm),
+    beats: parsedBeats,
+    blobKey: LEGACY_AUDIO_KEY,
+  };
+
+  Object.values(LEGACY_META_KEYS).forEach((key) => localStorage.removeItem(key));
+  return [migrated];
+}
+
+export function getSavedSongs(): SavedSongMeta[] {
+  const songs = readList();
+  if (songs.length > 0) return songs;
+
+  const migrated = migrateLegacySong();
+  if (migrated.length > 0) {
+    writeList(migrated);
+    return migrated;
+  }
+
+  return [];
+}
+
+export async function loadSong(id: string): Promise<{
   file: File;
   name: string;
   duration: number;
   bpm: number;
   beats: Beat[];
 } | null> {
-  const name = localStorage.getItem(META_KEYS.name);
-  const duration = localStorage.getItem(META_KEYS.duration);
-  const bpm = localStorage.getItem(META_KEYS.bpm);
-  const beats = localStorage.getItem(META_KEYS.beats);
+  const meta = getSavedSongs().find((s) => s.id === id);
+  if (!meta) return null;
 
-  if (!name || !duration || !bpm || !beats) return null;
-
-  const blob = await idbGet<Blob>(AUDIO_STORE, AUDIO_KEY);
+  const blob = await idbRequest<Blob | undefined>((store) => store.get(meta.blobKey));
   if (!blob) return null;
 
   return {
-    file: new File([blob], name, { type: blob.type }),
-    name,
-    duration: Number(duration),
-    bpm: Number(bpm),
-    beats: JSON.parse(beats),
+    file: new File([blob], meta.name, { type: blob.type }),
+    name: meta.name,
+    duration: meta.duration,
+    bpm: meta.bpm,
+    beats: meta.beats,
   };
 }
 
@@ -92,15 +142,48 @@ export async function saveSong(
   duration: number,
   bpm: number,
   beats: Beat[],
-): Promise<void> {
-  await idbSet(AUDIO_STORE, AUDIO_KEY, file);
-  localStorage.setItem(META_KEYS.name, name);
-  localStorage.setItem(META_KEYS.duration, String(duration));
-  localStorage.setItem(META_KEYS.bpm, String(bpm));
-  localStorage.setItem(META_KEYS.beats, JSON.stringify(beats));
+): Promise<string> {
+  const id = `${Date.now()}`;
+  const blobKey = `song:${id}`;
+
+  await idbWrite((store) => {
+    store.put(file, blobKey);
+  });
+
+  const songs = getSavedSongs().filter((s) => s.id !== id);
+  songs.unshift({ id, name, duration, bpm, beats, blobKey });
+
+  const evicted = songs.splice(MAX_SONGS);
+  writeList(songs);
+
+  for (const song of evicted) {
+    await idbWrite((store) => {
+      store.delete(song.blobKey);
+    });
+  }
+
+  return id;
 }
 
-export async function clearSong(): Promise<void> {
-  await idbDelete(AUDIO_STORE, AUDIO_KEY);
-  Object.values(META_KEYS).forEach((key) => localStorage.removeItem(key));
+export async function deleteSong(id: string): Promise<void> {
+  const songs = getSavedSongs();
+  const target = songs.find((s) => s.id === id);
+  writeList(songs.filter((s) => s.id !== id));
+
+  if (target) {
+    await idbWrite((store) => {
+      store.delete(target.blobKey);
+    });
+  }
+}
+
+export async function clearSongs(): Promise<void> {
+  const songs = getSavedSongs();
+  localStorage.removeItem(LIST_KEY);
+
+  for (const song of songs) {
+    await idbWrite((store) => {
+      store.delete(song.blobKey);
+    });
+  }
 }

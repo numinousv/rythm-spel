@@ -693,6 +693,54 @@
   }
 }
 
+@keyframes combo-pulse {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.combo-pulse {
+  animation: combo-pulse 0.25s ease-out;
+}
+
+.volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: var(--bg-muted);
+  border: none;
+  outline: none;
+  cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 20px;
+  background: var(--primary);
+  border: 2px solid var(--primary-dark);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 12px;
+  height: 20px;
+  background: var(--primary);
+  border: 2px solid var(--primary-dark);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+  background: var(--primary-dark);
+}
+
+.volume-slider::-moz-range-thumb:hover {
+  background: var(--primary-dark);
+}
+
 @keyframes glitch-img-before {
   /* — hard burst (0–10%, 0–0.4s) — */
   0% {
@@ -909,4 +957,37 @@
     clip-path: inset(50% 0% 32% 0%);
     transform: translateX(4px);
   }
+}
+
+.game-fullscreen:fullscreen {
+  background: #1e1e1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-fullscreen canvas {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.game-fullscreen:fullscreen canvas {
+  max-height: 100vh;
+  max-width: 100vw;
+}
+
+.game-pseudo-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-pseudo-fullscreen canvas {
+  max-height: 100dvh;
+  max-width: 100vw;
 }

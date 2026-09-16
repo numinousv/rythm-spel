@@ -4,4 +4,7 @@ export { Title } from "./Title";
 export { Strip } from "./Strip";
 export { Switch } from "./Switch";
 export { Progress } from "./Progress";
+export { LoadingDots } from "./LoadingDots";
+export { SpinLoadingIcon } from "./SpinLoadingIcon";
 export { ThemeProvider, useTheme } from "./ThemeContext";
+export { VolumeProvider, useVolume } from "../context/VolumeContext";
