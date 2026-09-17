@@ -67,7 +67,7 @@ export function ResultsPage() {
 
       {isSpectate && (
         <p className="text-center text-xs tracking-[2px] text-primary opacity-70">
-          SPECTATING — score not saved
+          SPECTATING - score not saved
         </p>
       )}
       <section>

@@ -27,15 +27,15 @@ Open `http://localhost:5173` in your browser.
 1. View your results: score, accuracy, max combo, and a letter grade (S/A/B/C/D)
 1. Retry for a new randomized variation, or go back and try a different song
 
-Your last song is saved automatically — you can return and play it again later.
+Your last song is saved automatically - you can return and play it again later.
 
 ## How It Works
 
-**Beat Detection** — The audio is decoded via the Web Audio API, then an energy-based peak detection algorithm identifies beats by comparing each chunk's energy against a local average window. Detected beats become note spawn points.
+**Beat Detection** -- Audio is decoded with the Web Audio API, then `@audio/beat` DP beat tracking finds BPM and beat positions between 40 and 240 BPM, with a light fallback for sparse audio. Beats are quantized to a 1/16 grid and expanded to 16ths for charting. `meyda` loudness helps mark sustained sections for hold notes.
 
-**Level Generation** — Each playthrough randomly selects which beats become notes and assigns them to one of four lanes, so no two runs feel the same. Difficulty controls note density and scroll speed.
+**Level Generation** -- Notes are placed on the quantized grid with seeded shuffling, so the same song and difficulty give a shareable chart, while Shuffle gives a fresh variation. Strong beats are favored, holds last 1 to 3 seconds on sustained parts, and lanes are balanced to avoid awkward repeats. Difficulty controls density, window, and scroll.
 
-**Scoring** — Timing accuracy per hit determines points, with a combo multiplier that increases every 10 consecutive hits.
+**Scoring** -- Timing accuracy per hit determines points, with a combo multiplier that increases every 10 consecutive hits.
 
 ## Tech Stack
 
@@ -45,7 +45,7 @@ Your last song is saved automatically — you can return and play it again later
 - **Routing:** React Router
 - **Rendering:** HTML5 Canvas (2D)
 - **Styling:** Tailwind CSS 4
-- **Audio:** Web Audio API (custom beat detection)
+- **Audio:** Web Audio API, `@audio/beat` for beat tracking, `meyda` for sustain detection
 - **Storage:** IndexedDB (audio blobs), localStorage (metadata)
 
 ## Known Issues

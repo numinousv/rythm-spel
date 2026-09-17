@@ -11,6 +11,8 @@ import {
 import { GameCanvas } from "../components/GameCanvas";
 import { loadSong } from "../utils/storage";
 import { prefetchResultsPage } from "../app/routes";
+import { generateNotes } from "../services/levelGenerator";
+import type { SongData } from "../types/game";
 
 export function GamePage() {
   const navigate = useNavigate();
@@ -23,6 +25,14 @@ export function GamePage() {
   const [songDuration, setSongDuration] = useState(60);
   const [started, setStarted] = useState(false);
   const [spectate, setSpectate] = useState(false);
+  const [seed, setSeed] = useState<number | null>(() => {
+    const s = sessionStorage.getItem("seed");
+    return s ? Number(s) : null;
+  });
+  const [previewSong, setPreviewSong] = useState<SongData | null>(null);
+  const [previewNotes, setPreviewNotes] = useState<ReturnType<
+    typeof generateNotes
+  > | null>(null);
   const comboRef = useRef<HTMLSpanElement>(null);
   const prevComboRef = useRef(0);
 
@@ -63,6 +73,38 @@ export function GamePage() {
     };
   }, []);
 
+  // Load song for preview (before start) so shuffle can show result
+  useEffect(() => {
+    if (started) return;
+    const sid = sessionStorage.getItem("songId");
+    if (!sid) return;
+    loadSong(sid).then((saved) => {
+      if (!saved) return;
+      setPreviewSong({
+        name: saved.name,
+        duration: saved.duration,
+        bpm: saved.bpm,
+        beats: saved.beats,
+        beatInterval: saved.beatInterval ?? 60 / saved.bpm,
+        offset: saved.offset ?? 0,
+        beats16: saved.beats16 ?? [],
+        audioBuffer: {} as AudioBuffer,
+      });
+    });
+  }, [started]);
+
+  useEffect(() => {
+    if (!previewSong) return;
+    const preview = generateNotes(previewSong, difficulty, seed ?? undefined);
+    setPreviewNotes(preview.slice(0, 32));
+  }, [previewSong, difficulty, seed]);
+
+  const handleShuffle = () => {
+    const newSeed = Date.now() ^ Math.floor(Math.random() * 1e9);
+    setSeed(newSeed);
+    sessionStorage.setItem("seed", String(newSeed));
+  };
+
   const handleStart = async (doSpectate = false) => {
     try {
       const saved = await loadSong(sessionStorage.getItem("songId") ?? "");
@@ -79,6 +121,9 @@ export function GamePage() {
       setSongDuration(saved.duration);
       setSpectate(doSpectate);
       sessionStorage.setItem("spectate", doSpectate ? "1" : "0");
+      const useSeed = seed ?? undefined;
+      if (useSeed !== undefined)
+        sessionStorage.setItem("seed", String(useSeed));
 
       const audioDataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -99,6 +144,7 @@ export function GamePage() {
           audioBuffer: {} as AudioBuffer,
         },
         diff,
+        useSeed,
       );
 
       setGameState(initialState);
@@ -136,11 +182,53 @@ export function GamePage() {
         <section>
           <Card title="READY?" layout="fill">
             <div className="flex flex-col gap-4 py-4 items-center">
-              <p className="text-sm tracking-[1px] text-center">
-                Difficulty: {DIFFICULTY_CONFIG[difficulty].label}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm tracking-[1px] text-center">
+                  Difficulty: {DIFFICULTY_CONFIG[difficulty].label}
+                </p>
+                <Button
+                  type="button"
+                  onClick={handleShuffle}
+                  className="w-auto px-3 py-1 text-xs"
+                  title="Reshuffle pattern (seeded shuffle mod)"
+                >
+                  Shuffle
+                </Button>
+              </div>
+              {previewNotes && (
+                <div className="w-full max-w-md">
+                  <p className="text-xs tracking-[1px] text-center opacity-60 mb-1">
+                    Preview: first {previewNotes.length} notes{" "}
+                    {seed !== null
+                      ? `(seed ${String(seed).slice(-6)})`
+                      : "(default seed)"}
+                  </p>
+                  <div className="grid grid-cols-4 gap-1 bg-muted p-2">
+                    {[0, 1, 2, 3].map((lane) => (
+                      <div
+                        key={lane}
+                        className="flex flex-col gap-1 min-h-20 bg-surface p-1"
+                      >
+                        <span className="text-xs text-center opacity-50">
+                          {["D", "F", "J", "K"][lane]}
+                        </span>
+                        {previewNotes
+                          .filter((n) => n.lane === lane)
+                          .slice(0, 8)
+                          .map((n) => (
+                            <div
+                              key={n.id}
+                              className={`h-3 w-full rounded-sm ${n.type === "hold" ? "bg-primary" : "bg-primary/70"}`}
+                              title={`${n.type} @ ${n.time.toFixed(2)}s`}
+                            />
+                          ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <p className="text-xs tracking-[1px] text-center opacity-70">
-                Keys: D F J K — or tap the lanes · Tap the canvas to start
+                Keys: D F J K · or tap the lanes · Tap the canvas to start
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md mx-auto">
                 <Button type="button" onClick={() => handleStart(false)}>
@@ -161,11 +249,6 @@ export function GamePage() {
                 <span>Score: {Math.round(gameState.score)}</span>
                 <span>Accuracy: {calculateAccuracy(gameState)}%</span>
               </div>
-              {spectate && (
-                <p className="text-xs tracking-[2px] text-center text-primary opacity-70">
-                  SPECTATING — auto-perfect
-                </p>
-              )}
               <div className="relative flex flex-col gap-4">
                 <GameCanvas
                   gameState={gameState}

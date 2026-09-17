@@ -384,7 +384,7 @@ export function GameCanvas({
               ctx.stroke();
             }
 
-            // Head cap: slightly taller, rounded, with subtle top marker
+            // head cap: slightly taller, rounded
             ctx.globalAlpha = fadedAlpha;
             ctx.fillStyle = isHit
               ? palette.hit
@@ -398,7 +398,7 @@ export function GameCanvas({
             if (isPending) {
               ctx.globalAlpha = 1 - fade * 0.4;
               ctx.fillStyle = palette.hitLine;
-              // thin marker line near top of head — DDR hold cue
+              // thin marker line near top of head: cue
               ctx.fillRect(noteX + 6, headY + 3, noteW - 12, 2);
             }
           }
@@ -546,13 +546,13 @@ export function GameCanvas({
         ctx.font = "10px Manrope, monospace";
         ctx.textAlign = "center";
         ctx.fillText(
-          "SPECTATING- auto-perfect- Tests Map-To-Rhythm Correctness",
+          "SPECTATING -auto-perfect- Tests Map-To-Rhythm Correctness",
           CANVAS_WIDTH / 2,
           14,
         );
       }
 
-      // Hold R progress — show while R is held to restart
+      // hold R progress, show while R is held to restart
       if (rHoldStartRef.current !== null && startedRef.current) {
         const prog = Math.min(1, (now - rHoldStartRef.current) / HOLD_R_MS);
         const barW = 160;
@@ -645,7 +645,10 @@ export function GameCanvas({
       frameRef.current = 0;
       fsComboRef.current = 0;
       lastPushedRef.current = { combo: 0, score: 0 };
-      const resetNotes = init.map((n) => ({ ...n, status: "pending" as const }));
+      const resetNotes = init.map((n) => ({
+        ...n,
+        status: "pending" as const,
+      }));
       const resetState: GameState = {
         status: "playing",
         notes: resetNotes,
@@ -666,7 +669,7 @@ export function GameCanvas({
     const gameLoop = () => {
       if (!aliveRef.current) return;
 
-      // Hold R to restart — works even when paused
+      // Hold R to restart, works even when paused
       if (rHoldStartRef.current !== null && startedRef.current) {
         const held = performance.now() - rHoldStartRef.current;
         if (held >= HOLD_R_MS) {

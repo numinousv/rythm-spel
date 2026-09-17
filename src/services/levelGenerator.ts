@@ -19,23 +19,33 @@ function mulberry32(a: number) {
   };
 }
 
-export function generateNotes(song: SongData, difficulty: Difficulty, seed?: number): Note[] {
+export function generateNotes(
+  song: SongData,
+  difficulty: Difficulty,
+  seed?: number,
+): Note[] {
   const settings = DIFFICULTY_CONFIG[difficulty];
   const notes: Note[] = [];
   let id = 0;
   // Seeded shuffle: same song+difficulty+seed -> same pattern set, but
   // different seeds give fresh StepMania-style variations (shuffle mod).
-  const rng = mulberry32(seed ?? hashSeed(`${song.name}:${difficulty}:${song.beats.length}`));
+  const rng = mulberry32(
+    seed ?? hashSeed(`${song.name}:${difficulty}:${song.beats.length}`),
+  );
 
   if (!song.beats16 || song.beats16.length === 0) {
     return notes;
   }
 
   const candidateBeats = song.beats16
-    .filter(b => b.strength > 0.1)
-    .map(b => ({ time: b.time, strength: b.strength }));
-  
-  const quantizedBeats = mapToGrid(candidateBeats, song.offset, song.beatInterval);
+    .filter((b) => b.strength > 0.1)
+    .map((b) => ({ time: b.time, strength: b.strength }));
+
+  const quantizedBeats = mapToGrid(
+    candidateBeats,
+    song.offset,
+    song.beatInterval,
+  );
 
   // Group beats by quantized time to prevent stacked notes
   const beatsByTime = new Map<number, typeof quantizedBeats>();
@@ -53,18 +63,18 @@ export function generateNotes(song: SongData, difficulty: Difficulty, seed?: num
 
   // Process beats grouped by time - pick best candidate per timestamp
   const sortedTimes = Array.from(beatsByTime.keys()).sort((a, b) => a - b);
-  
+
   for (const timeKey of sortedTimes) {
     const beatTime = timeKey / 1000;
     const candidates = beatsByTime.get(timeKey)!;
-    
+
     // Pick strongest candidate at this timestamp
-    const beat = candidates.reduce((best, curr) => 
-      curr.strength > best.strength ? curr : best
+    const beat = candidates.reduce((best, curr) =>
+      curr.strength > best.strength ? curr : best,
     );
 
     if (settings.noteDensity < 1 && rng() > settings.noteDensity) continue;
-    
+
     const measureIdx = Math.floor(beatTime / (song.beatInterval * 4));
     const currentInMeasure = measureNotes.get(measureIdx) || 0;
     if (currentInMeasure >= settings.maxDensity) continue;
@@ -79,7 +89,13 @@ export function generateNotes(song: SongData, difficulty: Difficulty, seed?: num
     }
     if (availableLanes.length === 0) continue;
 
-    const lane = selectLane(availableLanes, lastLaneIdx, lastLaneUsed, difficulty, rng);
+    const lane = selectLane(
+      availableLanes,
+      lastLaneIdx,
+      lastLaneUsed,
+      difficulty,
+      rng,
+    );
     if (lane === -1) continue;
 
     lastLaneIdx = lane;
@@ -88,11 +104,13 @@ export function generateNotes(song: SongData, difficulty: Difficulty, seed?: num
     // DDR/Mania holds: 1-3s, only on strong grid positions, weighted by strength
     const isOnBeat = beat.subdivision % 4 === 0;
     const isStrong = beat.strength > 0.6;
-    // Bias holds to downbeats/sustained positions — feels musical, not random
+    // bias holds to downbeats/sustained positions, feels musical, not random
     const holdBias = isOnBeat ? (isStrong ? 1.4 : 1.0) : 0.3;
     const baseHoldChance = settings.holdChance * 1.5 * holdBias;
     const isHold = isOnBeat && rng() < baseHoldChance;
-    const holdDuration = isHold ? quantizeHoldDuration(song.beatInterval, rng) : 0;
+    const holdDuration = isHold
+      ? quantizeHoldDuration(song.beatInterval, rng)
+      : 0;
 
     if (isHold) {
       laneHoldEnd[lane] = beatTime + holdDuration + 0.1;
@@ -121,28 +139,28 @@ function selectLane(
   lastLane: number,
   lastUsed: number[],
   difficulty: string,
-  rng: () => number
+  rng: () => number,
 ): number {
   if (available.length === 0) return -1;
   if (available.length === 1) return available[0];
 
-  const scored = available.map(lane => {
+  const scored = available.map((lane) => {
     let score = 0;
-    
+
     if (lane !== lastLane) score += 3;
-    
+
     const lastUsedIdx = lastUsed[lane];
     if (lastUsedIdx !== -1) {
       score -= 2;
     }
-    
+
     if (difficulty === "extreme" || difficulty === "hard") {
-      const usedCount = lastUsed.filter(x => x === lane).length;
+      const usedCount = lastUsed.filter((x) => x === lane).length;
       score -= usedCount;
     }
-    
+
     score += rng() * 2;
-    
+
     return { lane, score };
   });
 
@@ -158,7 +176,7 @@ function quantizeHoldDuration(beatInterval: number, rng: () => number): number {
     Math.max(1, Math.min(3, beatInterval * 4)),
     Math.max(1, Math.min(3, beatInterval * 6)),
   ];
-  // Bias slightly longer — both easy and hard should feel like real holds
+  // bias slightly longer, both easy and hard should feel like real holds
   const weights = [0.2, 0.3, 0.3, 0.2];
   const r = rng();
   let acc = 0;
