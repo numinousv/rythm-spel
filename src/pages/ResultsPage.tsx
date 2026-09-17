@@ -38,6 +38,7 @@ export function ResultsPage() {
 
   const state = JSON.parse(rawState);
   const accuracy = state.accuracy || 0;
+  const isSpectate = sessionStorage.getItem("spectate") === "1";
 
   const grade =
     accuracy >= 95
@@ -64,6 +65,11 @@ export function ResultsPage() {
       </section>
       <Strip />
 
+      {isSpectate && (
+        <p className="text-center text-xs tracking-[2px] text-primary opacity-70">
+          SPECTATING — score not saved
+        </p>
+      )}
       <section>
         <Card title="PERFORMANCE" layout="fill">
           <div className="flex flex-col gap-6 py-6 items-center">

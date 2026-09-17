@@ -39,7 +39,14 @@ export function HomePage() {
       clearTimeout(t);
     };
   }, []);
-  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  const [difficulty, setDifficulty] = useState<Difficulty>(() => {
+    const saved = localStorage.getItem("difficulty") as Difficulty | null;
+    return saved && DIFFICULTY_CONFIG[saved] ? saved : "medium";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("difficulty", difficulty);
+  }, [difficulty]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(
@@ -65,6 +72,9 @@ export function HomePage() {
         songData.duration,
         songData.bpm,
         songData.beats,
+        songData.beatInterval,
+        songData.offset,
+        songData.beats16,
       );
       setSongs(getSavedSongs());
 

@@ -27,6 +27,26 @@ const PAUSE_BTN = { x: 365, y: 8, w: 28, h: 24 };
 const FS_BTN = { x: 329, y: 8, w: 28, h: 24 };
 const BTN_HIT_PAD = 6;
 const RESUME_GRACE_SECONDS = 0.75;
+const HOLD_RADIUS = 6;
+const HOLD_HEAD_EXTRA = 8;
+
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
+  const rad = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rad, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rad);
+  ctx.arcTo(x + w, y + h, x, y + h, rad);
+  ctx.arcTo(x, y + h, x, y, rad);
+  ctx.arcTo(x, y, x + w, y, rad);
+  ctx.closePath();
+}
 
 const canFullscreen =
   typeof document !== "undefined" && !!document.fullscreenEnabled;
@@ -73,6 +93,7 @@ interface GameCanvasProps {
   audioUrl: string | null;
   onStateUpdate: (state: GameState) => void;
   songDuration: number;
+  spectate?: boolean;
 }
 
 export function GameCanvas({
@@ -81,6 +102,7 @@ export function GameCanvas({
   audioUrl,
   onStateUpdate,
   songDuration,
+  spectate = false,
 }: GameCanvasProps) {
   const { musicVolume, sfxVolume } = useVolume();
   const { theme } = useTheme();
@@ -97,6 +119,8 @@ export function GameCanvas({
   } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const spectateRef = useRef(spectate);
+  spectateRef.current = spectate;
   const stateRef = useRef<GameState>(gameState);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animFrameRef = useRef<number>(0);
@@ -129,6 +153,10 @@ export function GameCanvas({
   const comboPopRef = useRef(0);
   const clockRef = useRef({ anchorPerf: 0, anchorTime: 0 });
   const graceRef = useRef(LEAD_IN_SECONDS);
+  const offsetAdjustRef = useRef(0);
+  const rHoldStartRef = useRef<number | null>(null);
+  const initialNotesRef = useRef<GameState["notes"] | null>(null);
+  const HOLD_R_MS = 800;
 
   useEffect(() => {
     onStateUpdateRef.current = onStateUpdate;
@@ -284,7 +312,12 @@ export function GameCanvas({
         ctx.globalAlpha = 1;
       }
 
-      const scrollSpeed = DIFFICULTY_CONFIG[difficultyRef.current].scrollSpeed;
+      // XMod: scale scroll so 1 beat covers same distance at any BPM
+      // (revert to CMod by removing the multiplier: just use base speed)
+      const baseScroll = DIFFICULTY_CONFIG[difficultyRef.current].scrollSpeed;
+      const beatInterval = state.beatInterval || 0.5;
+      const xmodFactor = 0.5 / Math.max(0.25, Math.min(1.5, beatInterval));
+      const scrollSpeed = Math.max(220, Math.min(950, baseScroll * xmodFactor));
 
       const startIdx = lowerBoundTime(
         state.notes,
@@ -310,42 +343,64 @@ export function GameCanvas({
         if (note.type === "hold" && note.holdDuration > 0) {
           const tailFullHeight = note.holdDuration * scrollSpeed;
           {
+            // DDR/Mania style: long hold body with rounded ends, Nier tint.
             const tailY = noteY - tailFullHeight;
             const tailBottom = noteY + NOTE_HEIGHT / 2;
+            const totalH = tailBottom - tailY;
+            const isHit = note.status === "hit";
+            const isMiss = note.status === "missed";
+            const isPending = !isHit && !isMiss;
+            const fade =
+              noteY > HIT_LINE_Y ? Math.min((noteY - HIT_LINE_Y) / 100, 1) : 0;
+            const fadedAlpha = isPending ? 1 - fade * 0.6 : isHit ? 0.3 : 0.4;
 
-            if (note.status === "hit") {
-              ctx.globalAlpha = 0.3;
-              ctx.fillStyle = palette.hit;
-              ctx.fillRect(noteX, tailY, noteW, tailBottom - tailY);
-            } else if (note.status === "missed") {
-              ctx.globalAlpha = 0.4;
-              ctx.fillStyle = palette.miss;
-              ctx.fillRect(noteX, tailY, noteW, tailBottom - tailY);
-            } else {
-              const fade =
-                noteY > HIT_LINE_Y
-                  ? Math.min((noteY - HIT_LINE_Y) / 100, 1)
-                  : 0;
-              ctx.globalAlpha = 1 - fade * 0.6;
-              ctx.fillStyle = getLaneColor(note.lane);
-              ctx.fillRect(noteX, tailY, noteW, tailBottom - tailY);
+            // Body: lane color, rounded, distinct from taps
+            ctx.globalAlpha = fadedAlpha * (isPending ? 0.9 : 1);
+            ctx.fillStyle = isHit
+              ? palette.hit
+              : isMiss
+                ? palette.miss
+                : getLaneColor(note.lane);
+            drawRoundedRect(ctx, noteX, tailY, noteW, totalH, HOLD_RADIUS);
+            ctx.fill();
+
+            if (isPending) {
+              // Nier palette inner tint + outline to read as hold, not tap
+              ctx.globalAlpha = (1 - fade * 0.6) * 0.18;
+              ctx.fillStyle = palette.hitLine;
+              drawRoundedRect(
+                ctx,
+                noteX + 2,
+                tailY + 2,
+                noteW - 4,
+                totalH - 4,
+                HOLD_RADIUS - 2,
+              );
+              ctx.fill();
+              ctx.globalAlpha = (1 - fade * 0.6) * 0.6;
+              ctx.strokeStyle = palette.sep;
+              ctx.lineWidth = 1;
+              drawRoundedRect(ctx, noteX, tailY, noteW, totalH, HOLD_RADIUS);
+              ctx.stroke();
             }
 
-            ctx.globalAlpha =
-              note.status === "hit"
-                ? 0.3
-                : note.status === "missed"
-                  ? 0.4
-                  : noteY > HIT_LINE_Y
-                    ? 1 - Math.min((noteY - HIT_LINE_Y) / 100, 1) * 0.6
-                    : 1;
-            ctx.fillStyle =
-              note.status === "hit"
-                ? palette.hit
-                : note.status === "missed"
-                  ? palette.miss
-                  : getLaneColor(note.lane);
-            ctx.fillRect(noteX, noteY - NOTE_HEIGHT / 2, noteW, NOTE_HEIGHT);
+            // Head cap: slightly taller, rounded, with subtle top marker
+            ctx.globalAlpha = fadedAlpha;
+            ctx.fillStyle = isHit
+              ? palette.hit
+              : isMiss
+                ? palette.miss
+                : getLaneColor(note.lane);
+            const headH = NOTE_HEIGHT + HOLD_HEAD_EXTRA;
+            const headY = noteY - headH / 2;
+            drawRoundedRect(ctx, noteX, headY, noteW, headH, HOLD_RADIUS);
+            ctx.fill();
+            if (isPending) {
+              ctx.globalAlpha = 1 - fade * 0.4;
+              ctx.fillStyle = palette.hitLine;
+              // thin marker line near top of head — DDR hold cue
+              ctx.fillRect(noteX + 6, headY + 3, noteW - 12, 2);
+            }
           }
         } else {
           if (note.status === "hit") {
@@ -379,12 +434,43 @@ export function GameCanvas({
         const noteX = note.lane * LANE_WIDTH + 10;
         const noteW = LANE_WIDTH - 20;
 
-        ctx.globalAlpha = 0.4;
-        ctx.fillStyle = getLaneColor(note.lane);
-        ctx.fillRect(noteX, HIT_LINE_Y - remainingTail, noteW, remainingTail);
+        // Pinned at hit line while holding: remaining body + head, rounded, Nier tint
+        if (remainingTail > 4) {
+          ctx.globalAlpha = 0.85;
+          ctx.fillStyle = getLaneColor(note.lane);
+          drawRoundedRect(
+            ctx,
+            noteX,
+            HIT_LINE_Y - remainingTail,
+            noteW,
+            remainingTail,
+            HOLD_RADIUS,
+          );
+          ctx.fill();
+          ctx.globalAlpha = 0.2;
+          ctx.fillStyle = palette.hitLine;
+          drawRoundedRect(
+            ctx,
+            noteX + 2,
+            HIT_LINE_Y - remainingTail + 2,
+            noteW - 4,
+            Math.max(4, remainingTail - 4),
+            HOLD_RADIUS - 2,
+          );
+          ctx.fill();
+        }
         ctx.globalAlpha = 1;
         ctx.fillStyle = palette.hit;
-        ctx.fillRect(noteX, HIT_LINE_Y - NOTE_HEIGHT / 2, noteW, NOTE_HEIGHT);
+        const headH = NOTE_HEIGHT + HOLD_HEAD_EXTRA;
+        drawRoundedRect(
+          ctx,
+          noteX,
+          HIT_LINE_Y - headH / 2,
+          noteW,
+          headH,
+          HOLD_RADIUS,
+        );
+        ctx.fill();
         ctx.globalAlpha = 1;
       }
 
@@ -426,14 +512,61 @@ export function GameCanvas({
         ctx.fillStyle = "#b4af9a";
         ctx.font = "24px Manrope, monospace";
         ctx.textAlign = "center";
-        ctx.fillText("PAUSED", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+        ctx.fillText("PAUSED", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
         ctx.font = "12px Manrope, monospace";
         ctx.fillStyle = "#57544a";
         ctx.fillText(
           "SPACE / tap ⏸ to resume",
           CANVAS_WIDTH / 2,
-          CANVAS_HEIGHT / 2 + 30,
+          CANVAS_HEIGHT / 2 + 10,
         );
+
+        const offsetMs = Math.round(offsetAdjustRef.current * 1000);
+        const sign = offsetAdjustRef.current >= 0 ? "+" : "";
+        ctx.fillStyle = "#b4af9a";
+        ctx.font = "14px Manrope, monospace";
+        ctx.fillText(
+          `Audio Offset: ${sign}${offsetMs}ms`,
+          CANVAS_WIDTH / 2,
+          CANVAS_HEIGHT / 2 + 40,
+        );
+        ctx.font = "11px Manrope, monospace";
+        ctx.fillStyle = "#8a8172";
+        ctx.fillText(
+          "[← / →] Adjust  |  [R] Reset",
+          CANVAS_WIDTH / 2,
+          CANVAS_HEIGHT / 2 + 60,
+        );
+      }
+
+      if (spectateRef.current) {
+        ctx.fillStyle = "rgba(180,175,154,0.12)";
+        ctx.fillRect(0, 0, CANVAS_WIDTH, 22);
+        ctx.fillStyle = "#b4af9a";
+        ctx.font = "10px Manrope, monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(
+          "SPECTATING- auto-perfect- Tests Map-To-Rhythm Correctness",
+          CANVAS_WIDTH / 2,
+          14,
+        );
+      }
+
+      // Hold R progress — show while R is held to restart
+      if (rHoldStartRef.current !== null && startedRef.current) {
+        const prog = Math.min(1, (now - rHoldStartRef.current) / HOLD_R_MS);
+        const barW = 160;
+        const barH = 6;
+        const barX = (CANVAS_WIDTH - barW) / 2;
+        const barY = 28;
+        ctx.fillStyle = "rgba(30,30,26,0.6)";
+        ctx.fillRect(barX, barY, barW, barH);
+        ctx.fillStyle = "#b4af9a";
+        ctx.fillRect(barX, barY, barW * prog, barH);
+        ctx.fillStyle = "#b4af9a";
+        ctx.font = "10px Manrope, monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("HOLD R TO RESTART", CANVAS_WIDTH / 2, barY - 6);
       }
 
       // fullscreen-only HUD: both fullscreen modes hide the DOM combo below
@@ -477,12 +610,71 @@ export function GameCanvas({
       if (!audio || c.anchorPerf === 0) return audio?.currentTime ?? 0;
       return Math.max(
         0,
-        c.anchorTime + (performance.now() - c.anchorPerf) / 1000,
+        c.anchorTime +
+          (performance.now() - c.anchorPerf) / 1000 +
+          offsetAdjustRef.current,
       );
+    };
+
+    const doRestart = () => {
+      const init = initialNotesRef.current;
+      if (!init) return;
+      rHoldStartRef.current = null;
+      heldKeysRef.current.clear();
+      touchLanesRef.current.clear();
+      pausedRef.current = false;
+      if (tickNodesRef.current) {
+        try {
+          tickNodesRef.current.source.stop();
+        } catch {
+          /* already stopped */
+        }
+        tickNodesRef.current.source.disconnect();
+        tickNodesRef.current.gain.disconnect();
+        tickNodesRef.current = null;
+      }
+      const audio = audioRef.current;
+      if (audio) {
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+      }
+      hitFlashRef.current = 0;
+      missShakeRef.current = 0;
+      clockRef.current = { anchorPerf: performance.now(), anchorTime: 0 };
+      graceRef.current = LEAD_IN_SECONDS;
+      frameRef.current = 0;
+      fsComboRef.current = 0;
+      lastPushedRef.current = { combo: 0, score: 0 };
+      const resetNotes = init.map((n) => ({ ...n, status: "pending" as const }));
+      const resetState: GameState = {
+        status: "playing",
+        notes: resetNotes,
+        score: 0,
+        combo: 0,
+        maxCombo: 0,
+        totalHits: 0,
+        totalMisses: 0,
+        accuracy: 100,
+        elapsed: 0,
+        bpm: stateRef.current.bpm,
+        beatInterval: stateRef.current.beatInterval,
+      };
+      stateRef.current = resetState;
+      onStateUpdateRef.current(resetState);
     };
 
     const gameLoop = () => {
       if (!aliveRef.current) return;
+
+      // Hold R to restart — works even when paused
+      if (rHoldStartRef.current !== null && startedRef.current) {
+        const held = performance.now() - rHoldStartRef.current;
+        if (held >= HOLD_R_MS) {
+          doRestart();
+          animFrameRef.current = requestAnimationFrame(gameLoop);
+          return;
+        }
+      }
 
       if (pausedRef.current) {
         const pausedCanvas = canvasRef.current;
@@ -508,6 +700,46 @@ export function GameCanvas({
       const elapsed = nowElapsed();
       let state = { ...stateRef.current, elapsed };
 
+      // Spectate: auto-perfect hits/holds for map verification
+      if (spectateRef.current) {
+        // Taps + hold heads: hit exactly at note.time for perfect accuracy
+        for (const n of state.notes) {
+          if (n.status !== "pending") continue;
+          if (elapsed >= n.time && elapsed < n.time + 0.05) {
+            const result = judgeHit(
+              state,
+              n.lane,
+              n.time,
+              difficultyRef.current,
+            );
+            if (result.hit) {
+              state = result.state;
+              if (n.type === "hold") heldKeysRef.current.add(LANE_KEYS[n.lane]);
+              hitFlashRef.current = performance.now();
+              playHitSound();
+            }
+          }
+        }
+        // Hold tails: release exactly at tail
+        for (const n of [...state.notes]) {
+          if (n.status !== "holding") continue;
+          if (elapsed >= n.time + n.holdDuration) {
+            const ns = releaseHold(
+              state,
+              n.lane,
+              n.time + n.holdDuration,
+              difficultyRef.current,
+              graceRef.current,
+            );
+            if (ns !== state) {
+              state = ns;
+              heldKeysRef.current.delete(LANE_KEYS[n.lane]);
+            }
+          }
+        }
+      }
+
+      const prevMisses = state.totalMisses;
       state = updateMisses(
         state,
         elapsed,
@@ -515,6 +747,14 @@ export function GameCanvas({
         heldKeysRef.current,
         graceRef.current,
       );
+      // Spectate: auto-pause on miss indicates faulty map
+      if (spectateRef.current && state.totalMisses > prevMisses) {
+        // keep hit SFX for verification, just freeze
+        if (!pausedRef.current) {
+          pausedRef.current = true;
+          audioRef.current?.pause();
+        }
+      }
 
       const isHolding = state.notes.some((n) => n.status === "holding");
       const sfxCtx = sfxCtxRef.current;
@@ -623,6 +863,7 @@ export function GameCanvas({
     };
 
     const pressLane = (laneIndex: number) => {
+      if (spectateRef.current) return;
       if (!startedRef.current || pausedRef.current) return;
 
       heldKeysRef.current.add(LANE_KEYS[laneIndex]);
@@ -643,6 +884,7 @@ export function GameCanvas({
     };
 
     const releaseLane = (laneIndex: number) => {
+      if (spectateRef.current) return;
       heldKeysRef.current.delete(LANE_KEYS[laneIndex]);
 
       const elapsed = nowElapsed();
@@ -673,6 +915,36 @@ export function GameCanvas({
         return;
       }
 
+      if (e.code === "KeyR") {
+        e.preventDefault();
+        if (rHoldStartRef.current === null) {
+          rHoldStartRef.current = performance.now();
+        }
+        // When paused, arrow keys still adjust offset, but R hold is for restart
+        if (pausedRef.current) return;
+        return;
+      }
+
+      if (pausedRef.current) {
+        if (e.code === "ArrowLeft") {
+          e.preventDefault();
+          offsetAdjustRef.current = Math.max(
+            -0.2,
+            offsetAdjustRef.current - 0.01,
+          );
+          return;
+        }
+        if (e.code === "ArrowRight") {
+          e.preventDefault();
+          offsetAdjustRef.current = Math.min(
+            0.2,
+            offsetAdjustRef.current + 0.01,
+          );
+          return;
+        }
+        return;
+      }
+
       const laneIndex = LANE_KEYS.indexOf(e.key.toLowerCase());
       if (laneIndex === -1) return;
       e.preventDefault();
@@ -680,6 +952,18 @@ export function GameCanvas({
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === "KeyR") {
+        const start = rHoldStartRef.current;
+        rHoldStartRef.current = null;
+        // Quick tap R while paused resets audio offset (not a hold-restart)
+        if (pausedRef.current && start !== null) {
+          const held = performance.now() - start;
+          if (held < HOLD_R_MS) {
+            offsetAdjustRef.current = 0;
+          }
+        }
+        return;
+      }
       const laneIndex = LANE_KEYS.indexOf(e.key.toLowerCase());
       if (laneIndex === -1) return;
       releaseLane(laneIndex);
@@ -785,6 +1069,7 @@ export function GameCanvas({
     // losing focus (alt-tab, app switch) would strand "holding" notes and
     // soft-lock song end; release everything like a physical key-up.
     const handleBlur = () => {
+      rHoldStartRef.current = null;
       for (const key of Array.from(heldKeysRef.current)) {
         const laneIndex = LANE_KEYS.indexOf(key);
         if (laneIndex !== -1) releaseLane(laneIndex);
@@ -826,11 +1111,13 @@ export function GameCanvas({
       // to song changes only so volume-slider re-renders can't wipe progress.
       prevAudioUrlRef.current = audioUrl;
       stateRef.current = gameState;
+      initialNotesRef.current = gameState.notes.map((n) => ({ ...n }));
       frameRef.current = 0;
       fsComboRef.current = 0;
       lastPushedRef.current = { combo: 0, score: 0 };
       clockRef.current = { anchorPerf: performance.now(), anchorTime: 0 };
       graceRef.current = LEAD_IN_SECONDS;
+      rHoldStartRef.current = null;
     }
 
     const pushEvery = window.matchMedia("(pointer: coarse)").matches ? 20 : 10;
@@ -896,6 +1183,7 @@ export function GameCanvas({
       sfxCancelled = true;
       pausedRef.current = false;
       startedRef.current = false;
+      rHoldStartRef.current = null;
       touchLanesRef.current.clear();
       audio.pause();
       audio.src = "";

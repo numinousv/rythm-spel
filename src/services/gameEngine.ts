@@ -16,6 +16,8 @@ export function createInitialState(
     totalMisses: 0,
     accuracy: 0,
     elapsed: 0,
+    bpm: song.bpm,
+    beatInterval: song.beatInterval,
   };
 }
 

@@ -22,6 +22,7 @@ export function GamePage() {
   );
   const [songDuration, setSongDuration] = useState(60);
   const [started, setStarted] = useState(false);
+  const [spectate, setSpectate] = useState(false);
   const comboRef = useRef<HTMLSpanElement>(null);
   const prevComboRef = useRef(0);
 
@@ -62,7 +63,7 @@ export function GamePage() {
     };
   }, []);
 
-  const handleStart = async () => {
+  const handleStart = async (doSpectate = false) => {
     try {
       const saved = await loadSong(sessionStorage.getItem("songId") ?? "");
       if (!saved) {
@@ -76,6 +77,8 @@ export function GamePage() {
       setDifficulty(diff);
       setSongName(saved.name);
       setSongDuration(saved.duration);
+      setSpectate(doSpectate);
+      sessionStorage.setItem("spectate", doSpectate ? "1" : "0");
 
       const audioDataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -90,6 +93,9 @@ export function GamePage() {
           duration: saved.duration,
           bpm: saved.bpm,
           beats: saved.beats,
+          beatInterval: saved.beatInterval ?? 60 / saved.bpm,
+          offset: saved.offset ?? 0,
+          beats16: saved.beats16 ?? [],
           audioBuffer: {} as AudioBuffer,
         },
         diff,
@@ -113,6 +119,8 @@ export function GamePage() {
       sessionStorage.setItem("finalGameState", JSON.stringify(finalState));
       sessionStorage.setItem("songName", songName);
       sessionStorage.setItem("difficulty", difficulty);
+      // preserve spectate flag for results banner
+      sessionStorage.setItem("spectate", spectate ? "1" : "0");
       navigate("/results");
     }
   };
@@ -134,9 +142,14 @@ export function GamePage() {
               <p className="text-xs tracking-[1px] text-center opacity-70">
                 Keys: D F J K — or tap the lanes · Tap the canvas to start
               </p>
-              <Button type="button" onClick={handleStart}>
-                Start Game
-              </Button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md mx-auto">
+                <Button type="button" onClick={() => handleStart(false)}>
+                  Start Game
+                </Button>
+                <Button type="button" onClick={() => handleStart(true)}>
+                  Spectate
+                </Button>
+              </div>
             </div>
           </Card>
         </section>
@@ -148,6 +161,11 @@ export function GamePage() {
                 <span>Score: {Math.round(gameState.score)}</span>
                 <span>Accuracy: {calculateAccuracy(gameState)}%</span>
               </div>
+              {spectate && (
+                <p className="text-xs tracking-[2px] text-center text-primary opacity-70">
+                  SPECTATING — auto-perfect
+                </p>
+              )}
               <div className="relative flex flex-col gap-4">
                 <GameCanvas
                   gameState={gameState}
@@ -155,6 +173,7 @@ export function GamePage() {
                   audioUrl={audioUrl}
                   onStateUpdate={handleGameStateUpdate}
                   songDuration={songDuration}
+                  spectate={spectate}
                 />
                 {gameState.combo > 0 && (
                   // below the canvas on desktop, overlaid on the canvas bottom
