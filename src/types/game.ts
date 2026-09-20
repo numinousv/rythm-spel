@@ -82,19 +82,19 @@ export const DIFFICULTY_CONFIG: Record<Difficulty, DifficultySettings> = {
     label: "Medium",
   },
   hard: {
-    noteDensity: 0.95,
-    scrollSpeed: 560,
-    hitWindow: 50,
-    holdChance: 0.2,
-    maxDensity: 7,
-    label: "Hard",
-  },
-  extreme: {
     noteDensity: 1.2,
     scrollSpeed: 800,
     hitWindow: 30,
     holdChance: 0.3,
     maxDensity: 12,
+    label: "Hard",
+  },
+  extreme: {
+    noteDensity: 1.2,
+    scrollSpeed: 920,
+    hitWindow: 22,
+    holdChance: 0.28,
+    maxDensity: 16,
     label: "Extreme",
   },
 };

@@ -37,6 +37,8 @@ Your last song is saved automatically - you can return and play it again later.
 
 **Scoring** -- Timing accuracy per hit determines points, with a combo multiplier that increases every 10 consecutive hits.
 
+**Sanity checker** -- Use the spectate mode to have it auto-play, helping you make sure that the map generated is actually in tune with the rhythm.
+
 ## Tech Stack
 
 - **Language:** TypeScript

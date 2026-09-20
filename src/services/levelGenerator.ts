@@ -131,6 +131,53 @@ export function generateNotes(
     });
   }
 
+  // Extreme wall filler: prevent the ~25-note volley breaks by filling
+  // 16th-grid gaps that have no onset nearby. Keeps pressure constant.
+  if (difficulty === "extreme") {
+    const existingMs = new Set(notes.map((n) => Math.round(n.time * 1000)));
+    const hasNearby = (ms: number) => {
+      for (let d = -20; d <= 20; d++) if (existingMs.has(ms + d)) return true;
+      return false;
+    };
+    const step = song.beatInterval / 4; // 16th grid
+    for (let t = song.offset; t < song.duration - 0.5; t += step) {
+      const ms = Math.round(t * 1000);
+      if (hasNearby(ms)) continue;
+      const measureIdx = Math.floor(t / (song.beatInterval * 4));
+      if ((measureNotes.get(measureIdx) || 0) >= settings.maxDensity) continue;
+      // Fill ~62% of empty slots — dense wall without 100% spam
+      if (rng() > 0.62) continue;
+      const availableLanes: number[] = [];
+      for (let i = 0; i < LANE_COUNT; i++)
+        if (t >= laneHoldEnd[i]) availableLanes.push(i);
+      if (availableLanes.length === 0) continue;
+      const lane = selectLane(
+        availableLanes,
+        lastLaneIdx,
+        lastLaneUsed,
+        difficulty,
+        rng,
+      );
+      if (lane === -1) continue;
+      lastLaneIdx = lane;
+      lastLaneUsed[lane] = id;
+      measureNotes.set(measureIdx, (measureNotes.get(measureIdx) || 0) + 1);
+      existingMs.add(ms);
+      const subdiv = Math.round((t - song.offset) / step) % 16;
+      notes.push({
+        id: id++,
+        time: t,
+        lane,
+        type: "tap",
+        holdDuration: 0,
+        status: "pending",
+        beatIndex: Math.floor(t / (song.beatInterval / 16)),
+        subdivision: (subdiv + 16) % 16,
+      });
+    }
+    notes.sort((a, b) => a.time - b.time);
+  }
+
   return notes;
 }
 
