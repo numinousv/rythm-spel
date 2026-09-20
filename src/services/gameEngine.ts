@@ -5,10 +5,11 @@ import { generateNotes } from "./levelGenerator";
 export function createInitialState(
   song: SongData,
   difficulty: Difficulty,
+  seed?: number,
 ): GameState {
   return {
     status: "idle",
-    notes: generateNotes(song, difficulty),
+    notes: generateNotes(song, difficulty, seed),
     score: 0,
     combo: 0,
     maxCombo: 0,
@@ -16,6 +17,8 @@ export function createInitialState(
     totalMisses: 0,
     accuracy: 0,
     elapsed: 0,
+    bpm: song.bpm,
+    beatInterval: song.beatInterval,
   };
 }
 

@@ -1,4 +1,4 @@
-import type { Beat } from "../types/game";
+import type { Beat, Beat16 } from "../types/game";
 
 const DB_NAME = "rythm-spel-db";
 const DB_VERSION = 1;
@@ -21,6 +21,9 @@ export interface SavedSongMeta {
   duration: number;
   bpm: number;
   beats: Beat[];
+  beatInterval: number;
+  offset: number;
+  beats16: Beat16[];
   blobKey: string;
 }
 
@@ -94,6 +97,9 @@ function migrateLegacySong(): SavedSongMeta[] {
     duration: Number(duration),
     bpm: Number(bpm),
     beats: parsedBeats,
+    beatInterval: 60 / Number(bpm),
+    offset: 0,
+    beats16: [],
     blobKey: LEGACY_AUDIO_KEY,
   };
 
@@ -120,6 +126,9 @@ export async function loadSong(id: string): Promise<{
   duration: number;
   bpm: number;
   beats: Beat[];
+  beatInterval: number;
+  offset: number;
+  beats16: Beat16[];
 } | null> {
   const meta = getSavedSongs().find((s) => s.id === id);
   if (!meta) return null;
@@ -133,6 +142,9 @@ export async function loadSong(id: string): Promise<{
     duration: meta.duration,
     bpm: meta.bpm,
     beats: meta.beats,
+    beatInterval: meta.beatInterval ?? 60 / meta.bpm,
+    offset: meta.offset ?? 0,
+    beats16: meta.beats16 ?? [],
   };
 }
 
@@ -142,6 +154,9 @@ export async function saveSong(
   duration: number,
   bpm: number,
   beats: Beat[],
+  beatInterval: number,
+  offset: number,
+  beats16: Beat16[],
 ): Promise<string> {
   const id = `${Date.now()}`;
   const blobKey = `song:${id}`;
@@ -151,7 +166,7 @@ export async function saveSong(
   });
 
   const songs = getSavedSongs().filter((s) => s.id !== id);
-  songs.unshift({ id, name, duration, bpm, beats, blobKey });
+  songs.unshift({ id, name, duration, bpm, beats, beatInterval, offset, beats16, blobKey });
 
   const evicted = songs.splice(MAX_SONGS);
   writeList(songs);

@@ -694,9 +694,15 @@
 }
 
 @keyframes combo-pulse {
-  0% { transform: scale(1); }
-  30% { transform: scale(1.3); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .combo-pulse {
@@ -742,7 +748,7 @@
 }
 
 @keyframes glitch-img-before {
-  /* — hard burst (0–10%, 0–0.4s) — */
+  /* hard burst (0–10%, 0–0.4s) */
   0% {
     clip-path: inset(5% 0% 80% 0%);
     transform: translateX(-4px);
@@ -763,12 +769,12 @@
     clip-path: inset(44% 0% 38% 0%);
     transform: translateX(-4px);
   }
-  /* — fade to subtle — */
+  /* fade to subtle */
   10% {
     clip-path: inset(20% 0% 78% 0%);
     transform: translateX(-1px);
   }
-  /* — subtle drift (10–48%, ~1.5s) — */
+  /* subtle drift (10–48%, ~1.5s) */
   16% {
     clip-path: inset(75% 0% 23% 0%);
     transform: translateX(1px);
@@ -793,7 +799,7 @@
     clip-path: inset(48% 0% 50% 0%);
     transform: translateX(-1px);
   }
-  /* — hard burst (50–60%, 2–2.4s) — */
+  /* hard burst (50–60%, 2–2.4s) */
   50% {
     clip-path: inset(20% 0% 62% 0%);
     transform: translateX(-4px);
@@ -814,12 +820,12 @@
     clip-path: inset(35% 0% 48% 0%);
     transform: translateX(-4px);
   }
-  /* — fade to subtle — */
+  /* fade to subtle */
   60% {
     clip-path: inset(48% 0% 50% 0%);
     transform: translateX(1px);
   }
-  /* — subtle drift (60–98%, ~1.5s) — */
+  /* subtle drift (60–98%, ~1.5s) */
   66% {
     clip-path: inset(15% 0% 83% 0%);
     transform: translateX(-1px);
@@ -851,7 +857,7 @@
 }
 
 @keyframes glitch-img-after {
-  /* — hard burst (0–10%, 0–0.4s) — */
+  /* hard burst (0–10%, 0–0.4s) */
   0% {
     clip-path: inset(50% 0% 32% 0%);
     transform: translateX(4px);
@@ -872,12 +878,12 @@
     clip-path: inset(58% 0% 25% 0%);
     transform: translateX(4px);
   }
-  /* — fade to subtle — */
+  /* fade to subtle */
   10% {
     clip-path: inset(72% 0% 26% 0%);
     transform: translateX(1px);
   }
-  /* — subtle drift (10–48%, ~1.5s) — */
+  /* subtle drift (10–48%, ~1.5s) */
   16% {
     clip-path: inset(18% 0% 80% 0%);
     transform: translateX(-1px);
@@ -902,7 +908,7 @@
     clip-path: inset(52% 0% 46% 0%);
     transform: translateX(1px);
   }
-  /* — hard burst (50–60%, 2–2.4s) — */
+  /* hard burst (50–60%, 2–2.4s) */
   50% {
     clip-path: inset(62% 0% 20% 0%);
     transform: translateX(4px);
@@ -923,12 +929,12 @@
     clip-path: inset(78% 0% 12% 0%);
     transform: translateX(4px);
   }
-  /* — fade to subtle — */
+  /* fade to subtle */
   60% {
     clip-path: inset(35% 0% 63% 0%);
     transform: translateX(-1px);
   }
-  /* — subtle drift (60–98%, ~1.5s) — */
+  /* subtle drift (60–98%, ~1.5s) */
   66% {
     clip-path: inset(55% 0% 43% 0%);
     transform: translateX(1px);
